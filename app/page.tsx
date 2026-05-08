@@ -90,25 +90,25 @@ export default function Home() {
       await DataManager.updateTransaction(id, updates);
       
       // Sync with Inventory
-      const typedUpdates = updates as any;
-      const shouldBeInInventory = typedUpdates.is_investment && typedUpdates.type === 'buy';
+      const u = updates as any;
+      const shouldBeInInventory = u.is_investment && u.type === 'buy';
       
       if (shouldBeInInventory) {
           // Ensure it's in inventory (if not already)
           const inv = await DataManager.getInventory();
-          const exists = inv.find(i => i.product_name === updates.product_name && i.purchase_date === updates.date);
+          const exists = inv.find(i => i.product_name === u.product_name && i.purchase_date === u.date);
           if (!exists) {
             await DataManager.addToInventory({
-              product_name: updates.product_name,
-              purchase_price: updates.amount,
-              purchase_date: updates.date,
-              quantity: updates.quantity,
+              product_name: u.product_name,
+              purchase_price: u.amount,
+              purchase_date: u.date,
+              quantity: u.quantity,
               status: 'available'
             });
           }
       } else {
           // Remove from inventory if it was there
-          await DataManager.removeFromInventory(updates.product_name, updates.date);
+          await DataManager.removeFromInventory(u.product_name, u.date);
       }
       
       await loadData();
