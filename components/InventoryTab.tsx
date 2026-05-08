@@ -60,6 +60,10 @@ const InventoryTab: React.FC<Props> = ({ inventory, onQuickSell }) => {
               </span>
             </div>
             
+            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px', marginTop: '10px' }}>
+              נקנה ב: ₪{item.purchase_price.toLocaleString()} | {new Date(item.purchase_date).toLocaleDateString('he-IL')}
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '20px' }}>
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                 <span className="stat-label" style={{ fontSize: '0.7rem' }}>מחיר קנייה</span>
