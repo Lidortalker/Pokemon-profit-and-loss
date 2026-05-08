@@ -1,4 +1,5 @@
 'use client';
+// Vercel Sync Trigger 1.0.2
 
 import React, { useState, useEffect } from 'react';
 import StatsCards from '../components/StatsCards';
