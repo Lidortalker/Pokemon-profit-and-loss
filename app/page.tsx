@@ -90,7 +90,8 @@ export default function Home() {
       await DataManager.updateTransaction(id, updates);
       
       // Sync with Inventory
-      const shouldBeInInventory = updates.is_investment && updates.type === 'buy';
+      const typedUpdates = updates as any;
+      const shouldBeInInventory = typedUpdates.is_investment && typedUpdates.type === 'buy';
       
       if (shouldBeInInventory) {
           // Ensure it's in inventory (if not already)
