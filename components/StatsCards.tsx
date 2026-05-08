@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { PortfolioStats } from '../types/database';
-import { TrendingUp, Wallet, ArrowUpCircle, Percent } from 'lucide-react';
+import { TrendingUp, Wallet, TrendingDown, Activity } from 'lucide-react';
 
 interface Props {
   stats: PortfolioStats;
@@ -11,55 +11,50 @@ interface Props {
 const StatsCards: React.FC<Props> = ({ stats }) => {
   const cards = [
     {
-      title: 'סה"כ מושקע',
+      title: 'השקעה כוללת',
       value: `₪${stats.totalInvested.toLocaleString()}`,
-      icon: <Wallet className="text-blue-400" size={24} />,
-      gradient: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), transparent)',
-      borderColor: 'rgba(59, 130, 246, 0.2)'
-    },
-    {
-      title: 'הכנסות',
-      value: `₪${stats.totalIncome.toLocaleString()}`,
-      icon: <ArrowUpCircle className="text-emerald-400" size={24} />,
-      gradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), transparent)',
-      borderColor: 'rgba(16, 185, 129, 0.2)'
+      icon: <Wallet size={24} />,
+      color: '#ffffff',
+      label: 'TOTAL DEPOSITED'
     },
     {
       title: 'רווח נקי',
       value: `₪${stats.netProfit.toLocaleString()}`,
-      icon: <TrendingUp className="text-purple-400" size={24} />,
-      gradient: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), transparent)',
-      borderColor: 'rgba(139, 92, 246, 0.2)'
+      icon: <TrendingUp size={24} />,
+      color: stats.netProfit >= 0 ? 'var(--success)' : 'var(--danger)',
+      label: 'NET EARNINGS'
     },
     {
       title: 'תשואה (ROI)',
       value: `${stats.roi.toFixed(1)}%`,
-      icon: <Percent className="text-amber-400" size={24} />,
-      gradient: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), transparent)',
-      borderColor: 'rgba(245, 158, 11, 0.2)'
+      icon: <Activity size={24} />,
+      color: 'var(--accent-gold)',
+      label: 'PORTFOLIO YIELD'
+    },
+    {
+      title: 'יתרת מזומן',
+      value: `₪${stats.totalIncome.toLocaleString()}`,
+      icon: <TrendingUp size={24} />,
+      color: '#ffffff',
+      label: 'CASH ON HAND'
     }
   ];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
-      {cards.map((card, idx) => (
-        <div 
-          key={idx} 
-          className="glass-card" 
-          style={{ 
-            padding: '24px', 
-            background: card.gradient,
-            borderColor: card.borderColor,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="stat-label">{card.title}</span>
-            <div style={{ opacity: 0.8 }}>{card.icon}</div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px' }}>
+      {cards.map((card, index) => (
+        <div key={index} className="glass-card" style={{ padding: '32px', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: '24px', left: '24px', opacity: 0.2, color: card.color }}>
+            {card.icon}
           </div>
-          <div className="stat-value">{card.value}</div>
+          <div className="stat-label">{card.label}</div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '8px' }}>{card.title}</h3>
+            <div className="stat-value" style={{ color: card.color }}>{card.value}</div>
+          </div>
+          <div style={{ 
+            height: '2px', width: '40px', background: card.color, marginTop: '20px', borderRadius: '1px', opacity: 0.6 
+          }}></div>
         </div>
       ))}
     </div>
