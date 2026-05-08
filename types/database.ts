@@ -1,4 +1,4 @@
-export type TransactionType = 'buy' | 'sell' | 'fee' | 'adjustment' | 'credit' | 'scratch';
+export type TransactionType = 'buy' | 'sell' | 'scratch' | 'credit' | 'collection';
 
 export interface Transaction {
   id: string;
@@ -10,6 +10,8 @@ export interface Transaction {
   date: string;
   notes?: string;
   inventory_id?: string;
+  is_investment: boolean;
+  profit_amount?: number;
 }
 
 export interface InventoryItem {
