@@ -2,14 +2,15 @@
 
 import React, { useState } from 'react';
 import { InventoryItem } from '../types/database';
-import { DollarSign, Tag, Calendar, X, Hash, Package, TrendingUp, Search, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { DollarSign, Tag, Calendar, X, Hash, Package, TrendingUp, Search, ArrowUpDown, ChevronDown, Edit2 } from 'lucide-react';
 
 interface Props {
   inventory: InventoryItem[];
   onQuickSell: (itemId: string, sellPrice: number, quantity: number, sellDate: string) => void;
+  onEdit?: (itemId: string) => void;
 }
 
-const InventoryTab: React.FC<Props> = ({ inventory, onQuickSell }) => {
+const InventoryTab: React.FC<Props> = ({ inventory, onQuickSell, onEdit }) => {
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [sellPrice, setSellPrice] = useState<number>(0);
   const [sellQuantity, setSellQuantity] = useState<number>(1);
@@ -104,28 +105,58 @@ const InventoryTab: React.FC<Props> = ({ inventory, onQuickSell }) => {
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>#{item.id.split('-')[0]}</span>
                   </div>
                 </div>
-                <div style={{ 
-                  background: 'linear-gradient(135deg, #1e293b, #0f172a)', 
-                  color: 'white', 
-                  padding: '6px 14px', 
-                  borderRadius: '10px', 
-                  fontSize: '0.9rem',
-                  fontWeight: 800,
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                }}>
-                  x{item.quantity}
+                
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  {onEdit && (
+                    <button 
+                      onClick={() => onEdit(item.id)}
+                      style={{
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--text-secondary)',
+                        padding: '8px',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      title="ערוך מוצר"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                  )}
+                  <div style={{ 
+                    background: 'linear-gradient(135deg, #1e293b, #0f172a)', 
+                    color: 'white', 
+                    padding: '6px 14px', 
+                    borderRadius: '10px', 
+                    fontSize: '0.9rem',
+                    fontWeight: 800,
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                  }}>
+                    x{item.quantity}
+                  </div>
                 </div>
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '12px', marginTop: '24px' }}>
                 <div style={{ background: 'rgba(255,255,255,0.03)', padding: '14px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <span className="stat-label" style={{ fontSize: '0.65rem', display: 'block', marginBottom: '4px' }}>מחיר רכישה</span>
-                  <div style={{ fontWeight: 800, fontSize: '1.2rem', color: 'white' }}>₪{item.purchase_price.toLocaleString()}</div>
+                  <div style={{ fontWeight: 800, fontSize: '1.15rem', color: 'white' }}>
+                    ₪{item.purchase_price.toLocaleString()}
+                    {item.quantity > 1 && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', display: 'block', marginTop: '2px', fontWeight: 600 }}>
+                        סה"כ: ₪{(item.purchase_price * item.quantity).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.03)', padding: '14px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <span className="stat-label" style={{ fontSize: '0.65rem', display: 'block', marginBottom: '4px' }}>תאריך רכישה</span>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{new Date(item.purchase_date).toLocaleDateString('he-IL')}</div>
+                  <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>{new Date(item.purchase_date).toLocaleDateString('he-IL')}</div>
                 </div>
               </div>
             </div>
@@ -198,7 +229,7 @@ const InventoryTab: React.FC<Props> = ({ inventory, onQuickSell }) => {
               </div>
 
               <label className="stat-label">תאריך סגירת עסקה</label>
-              <div style={{ position: 'relative', marginBottom: '32px' }}>
+              <div style={{ position: 'relative', marginBottom: '24px' }}>
                 <Calendar size={18} style={{ position: 'absolute', top: '14px', right: '14px', color: 'var(--text-secondary)' }} />
                 <input 
                   type="date" required className="form-input" style={{ paddingRight: '40px', marginBottom: 0 }}
@@ -206,6 +237,22 @@ const InventoryTab: React.FC<Props> = ({ inventory, onQuickSell }) => {
                   onChange={e => setSellDate(e.target.value)}
                 />
               </div>
+
+              {sellQuantity > 0 && (
+                <div style={{ 
+                  background: 'rgba(255,255,255,0.03)', 
+                  padding: '12px 16px', 
+                  borderRadius: '12px', 
+                  border: '1px solid var(--border-color)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '24px'
+                }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>סה"כ תקבול ממכירה:</span>
+                  <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--success)' }}>₪{(sellPrice * sellQuantity).toLocaleString()}</span>
+                </div>
+              )}
 
               <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '18px', fontSize: '1.05rem', borderRadius: '14px' }}>
                 אשר וסיים עסקה

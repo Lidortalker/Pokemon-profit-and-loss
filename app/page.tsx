@@ -6,6 +6,7 @@ import TransactionTable from '../components/TransactionTable';
 import InventoryTab from '../components/InventoryTab';
 import AnalyticsChart from '../components/AnalyticsChart';
 import DataManager from '../lib/dataManager';
+import { supabase } from '../lib/supabase';
 import { Transaction, InventoryItem, PortfolioStats, TransactionType } from '../types/database';
 import { Plus, LayoutDashboard, History, Package, Loader2, X, Target, Heart, ChevronLeft, Bell, Settings, User } from 'lucide-react';
 
@@ -52,9 +53,9 @@ export default function Home() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await DataManager.addTransaction(newTx);
+      let createdInventoryItem = null;
       if (newTx.is_investment && (newTx.type === 'buy' || newTx.type === 'scratch')) {
-        await DataManager.addToInventory({
+        createdInventoryItem = await DataManager.addToInventory({
           product_name: newTx.product_name,
           purchase_price: newTx.amount,
           purchase_date: newTx.date,
@@ -62,6 +63,13 @@ export default function Home() {
           status: 'available'
         });
       }
+
+      const txToCreate = {
+        ...newTx,
+        inventory_id: createdInventoryItem ? createdInventoryItem.id : undefined
+      };
+
+      await DataManager.addTransaction(txToCreate);
       await loadData();
       setIsModalOpen(false);
       setNewTx({
@@ -69,6 +77,7 @@ export default function Home() {
         date: new Date().toISOString().split('T')[0], is_investment: true
       });
     } catch (error) {
+      console.error('Error adding transaction:', error);
       alert('שגיאה בשמירת הנתונים');
     } finally {
       setIsLoading(false);
@@ -81,27 +90,60 @@ export default function Home() {
     setIsLoading(true);
     try {
       const { id, created_at, ...updates } = editingTx;
-      await DataManager.updateTransaction(id, updates);
-      
       const u = updates as any;
-      const shouldBeInInventory = u.is_investment && u.type === 'buy';
-      
+      const shouldBeInInventory = u.is_investment && (u.type === 'buy' || u.type === 'scratch');
+      let updatedInventoryId = u.inventory_id;
+
       if (shouldBeInInventory) {
-          const inv = await DataManager.getInventory();
-          const exists = inv.find(i => i.product_name === u.product_name && i.purchase_date === u.date);
-          if (!exists) {
-            await DataManager.addToInventory({
-              product_name: u.product_name, purchase_price: u.amount,
-              purchase_date: u.date, quantity: u.quantity, status: 'available'
-            });
+        if (u.inventory_id) {
+          // Update the existing inventory item using its ID!
+          const { error: invErr } = await supabase
+            .from('inventory')
+            .update({
+              product_name: u.product_name,
+              purchase_price: u.amount,
+              purchase_date: u.date,
+              quantity: u.quantity
+            })
+            .eq('id', u.inventory_id);
+
+          if (invErr) {
+            console.error('Error updating inventory item:', invErr);
           }
+        } else {
+          // It is active investment but doesn't have inventory_id yet (fallback for older items)
+          const createdInventoryItem = await DataManager.addToInventory({
+            product_name: u.product_name,
+            purchase_price: u.amount,
+            purchase_date: u.date,
+            quantity: u.quantity,
+            status: 'available'
+          });
+          updatedInventoryId = createdInventoryItem.id;
+          updates.inventory_id = createdInventoryItem.id;
+        }
       } else {
-          await DataManager.removeFromInventory(u.product_name, u.date);
+        // If it shouldn't be in inventory but has an inventory_id, delete it
+        if (u.inventory_id) {
+          const { error: delErr } = await supabase
+            .from('inventory')
+            .delete()
+            .eq('id', u.inventory_id);
+
+          if (delErr) {
+            console.error('Error deleting inventory item:', delErr);
+          }
+          updatedInventoryId = null;
+          updates.inventory_id = null as any;
+        }
       }
+
+      await DataManager.updateTransaction(id, updates);
       await loadData();
       setIsEditModalOpen(false);
       setEditingTx(null);
     } catch (error) {
+      console.error('Error updating transaction:', error);
       alert('שגיאה בעדכון הנתונים');
     } finally {
       setIsLoading(false);
@@ -112,12 +154,43 @@ export default function Home() {
     if (!confirm('האם אתה בטוח שברצונך למחוק עסקה זו?')) return;
     setIsLoading(true);
     try {
+      const tx = transactions.find(t => t.id === id);
+      if (tx && tx.inventory_id) {
+        const { error: delErr } = await supabase
+          .from('inventory')
+          .delete()
+          .eq('id', tx.inventory_id);
+        if (delErr) {
+          console.error('Error deleting inventory item:', delErr);
+        }
+      }
       await DataManager.deleteTransaction(id);
       await loadData();
     } catch (error) {
+      console.error('Error deleting transaction:', error);
       alert('שגיאה במחיקת העסקה');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleEditInventoryItem = (itemId: string) => {
+    // 1. Try to find transaction by inventory_id
+    let tx = transactions.find(t => t.inventory_id === itemId);
+
+    // 2. Fallback: find by name and date match for older entries
+    if (!tx) {
+      const item = inventory.find(i => i.id === itemId);
+      if (item) {
+        tx = transactions.find(t => t.product_name === item.product_name && t.date === item.purchase_date && (t.type === 'buy' || t.type === 'scratch'));
+      }
+    }
+
+    if (tx) {
+      setEditingTx(tx);
+      setIsEditModalOpen(true);
+    } else {
+      alert('לא נמצאה עסקת רכישה תואמת לפריט זה במלאי. תוכל לערוך אותו דרך יומן העסקאות.');
     }
   };
 
@@ -212,11 +285,66 @@ export default function Home() {
                 <h3 style={{ marginBottom: '25px', fontWeight: 700, fontSize: '1.2rem' }}>ניתוח מגמות וביצועים</h3>
                 <AnalyticsChart transactions={transactions} />
               </div>
+
+              {/* Compact Recent Transactions */}
+              <div className="glass-card" style={{ padding: '30px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h3 style={{ fontWeight: 700, fontSize: '1.2rem' }}>עסקאות אחרונות</h3>
+                  <button 
+                    onClick={() => setActiveTab('history')} 
+                    style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                  >
+                    הצג יומן מלא <ChevronLeft size={16} style={{ transform: 'rotate(180deg)' }} />
+                  </button>
+                </div>
+                
+                {transactions.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>אין עסקאות להצגה.</div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                          <th style={{ padding: '12px 10px', fontWeight: 600 }}>תאריך</th>
+                          <th style={{ padding: '12px 10px', fontWeight: 600 }}>סוג</th>
+                          <th style={{ padding: '12px 10px', fontWeight: 600 }}>מוצר</th>
+                          <th style={{ padding: '12px 10px', fontWeight: 600 }}>כמות</th>
+                          <th style={{ padding: '12px 10px', fontWeight: 600 }}>סה"כ תנועה</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {transactions.slice(0, 5).map((tx) => (
+                          <tr key={tx.id} style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.9rem' }}>
+                            <td style={{ padding: '14px 10px', color: 'var(--text-secondary)' }}>{new Date(tx.date).toLocaleDateString('he-IL')}</td>
+                            <td style={{ padding: '14px 10px' }}>
+                              <span style={{
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                fontSize: '0.7rem',
+                                fontWeight: '700',
+                                background: tx.type === 'buy' || tx.type === 'scratch' || tx.type === 'collection' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                                color: tx.type === 'buy' || tx.type === 'scratch' || tx.type === 'collection' ? 'var(--danger)' : 'var(--success)'
+                              }}>
+                                {tx.type === 'buy' ? 'קנייה' : tx.type === 'sell' ? 'מכירה' : tx.type === 'scratch' ? 'גירוד' : tx.type === 'credit' ? 'זיכוי' : 'אוסף'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '14px 10px', fontWeight: 600 }}>{tx.product_name}</td>
+                            <td style={{ padding: '14px 10px' }}>{tx.quantity}</td>
+                            <td style={{ padding: '14px 10px', fontWeight: 700, color: tx.type === 'buy' || tx.type === 'scratch' || tx.type === 'collection' ? 'var(--danger)' : 'var(--success)' }}>
+                              {tx.type === 'buy' || tx.type === 'scratch' || tx.type === 'collection' ? '-' : '+'}₪{(tx.amount * tx.quantity).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {activeTab === 'inventory' && (
-            <InventoryTab inventory={inventory} onQuickSell={handleQuickSell} />
+            <InventoryTab inventory={inventory} onQuickSell={handleQuickSell} onEdit={handleEditInventoryItem} />
           )}
 
           {activeTab === 'history' && (
@@ -292,6 +420,23 @@ export default function Home() {
                 </div>
               </div>
 
+              {newTx.quantity > 1 && (
+                <div style={{ 
+                  background: 'rgba(255,255,255,0.03)', 
+                  padding: '12px 16px', 
+                  borderRadius: '12px', 
+                  border: '1px solid var(--border-color)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: '15px',
+                  marginBottom: '15px'
+                }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>סה"כ לתנועה:</span>
+                  <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-blue)' }}>₪{(newTx.amount * newTx.quantity).toLocaleString()}</span>
+                </div>
+              )}
+
               <button type="submit" disabled={isLoading} className="btn btn-primary" style={{ width: '100%', marginTop: '20px', padding: '18px' }}>
                 {isLoading ? 'שומר עסקה...' : 'אשר והוסף לפורטפוליו'}
               </button>
@@ -336,6 +481,23 @@ export default function Home() {
                   <input type="number" required className="form-input" value={editingTx.amount} onChange={e => setEditingTx({...editingTx, amount: Number(e.target.value)})} />
                 </div>
               </div>
+
+              {editingTx.quantity > 1 && (
+                <div style={{ 
+                  background: 'rgba(255,255,255,0.03)', 
+                  padding: '12px 16px', 
+                  borderRadius: '12px', 
+                  border: '1px solid var(--border-color)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: '15px',
+                  marginBottom: '15px'
+                }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>סה"כ לתנועה:</span>
+                  <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-blue)' }}>₪{(editingTx.amount * editingTx.quantity).toLocaleString()}</span>
+                </div>
+              )}
 
               <button type="submit" disabled={isLoading} className="btn btn-primary" style={{ width: '100%', marginTop: '30px', padding: '18px' }}>
                 {isLoading ? 'מעדכן שינויים...' : 'שמור שינויים'}
