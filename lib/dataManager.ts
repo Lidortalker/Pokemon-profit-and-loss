@@ -13,7 +13,6 @@ class DataManager {
       console.error('Error fetching transactions:', error);
       return [];
     }
-    console.log('Fetched transactions from Supabase:', data?.length || 0);
     return data || [];
   }
 
