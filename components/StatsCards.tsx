@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { PortfolioStats } from '../types/database';
-import { TrendingUp, Wallet, TrendingDown, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Activity, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
 interface Props {
   stats: PortfolioStats;
@@ -13,31 +13,31 @@ const StatsCards: React.FC<Props> = ({ stats }) => {
     {
       title: 'השקעה כוללת',
       value: `₪${stats.totalInvested.toLocaleString()}`,
-      icon: <Wallet size={24} />,
-      color: '#ffffff',
-      label: 'TOTAL DEPOSITED'
+      icon: <ArrowDownLeft size={24} />,
+      color: 'var(--danger)',
+      label: 'TOTAL INVESTED'
+    },
+    {
+      title: 'סה"כ תקבולים',
+      value: `₪${stats.totalIncome.toLocaleString()}`,
+      icon: <ArrowUpRight size={24} />,
+      color: 'var(--success)',
+      label: 'TOTAL INCOME'
     },
     {
       title: 'רווח נקי',
-      value: `₪${stats.netProfit.toLocaleString()}`,
-      icon: <TrendingUp size={24} />,
+      value: `${stats.netProfit >= 0 ? '+' : ''}₪${stats.netProfit.toLocaleString()}`,
+      icon: stats.netProfit >= 0 ? <TrendingUp size={24} /> : <TrendingDown size={24} />,
       color: stats.netProfit >= 0 ? 'var(--success)' : 'var(--danger)',
-      label: 'NET EARNINGS'
+      label: 'NET PROFIT'
     },
     {
       title: 'תשואה (ROI)',
-      value: `${stats.roi.toFixed(1)}%`,
+      value: `${stats.roi >= 0 ? '+' : ''}${stats.roi.toFixed(1)}%`,
       icon: <Activity size={24} />,
-      color: 'var(--accent-gold)',
+      color: stats.roi >= 0 ? 'var(--accent-gold)' : 'var(--danger)',
       label: 'PORTFOLIO YIELD'
     },
-    {
-      title: 'יתרת מזומן',
-      value: `₪${stats.totalIncome.toLocaleString()}`,
-      icon: <TrendingUp size={24} />,
-      color: '#ffffff',
-      label: 'CASH ON HAND'
-    }
   ];
 
   return (

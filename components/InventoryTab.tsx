@@ -27,6 +27,26 @@ const InventoryTab: React.FC<Props> = ({ inventory, onQuickSell, onEdit }) => {
       return 0;
     });
 
+  // Summary calculations
+  const totalInvested = inventory.reduce((sum, item) => sum + item.purchase_price * item.quantity, 0);
+  const totalItems = inventory.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Days held helper
+  const getDaysHeld = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
+  };
+
+  const getDaysColor = (days: number) => {
+    if (days <= 30) return '#10b981';  // green — fresh
+    if (days <= 90) return '#f59e0b';  // amber — medium
+    return '#e11d48';                  // red   — holding long
+  };
+
+  // Profit preview in sell modal
+  const profitPerUnit = selectedItem ? sellPrice - selectedItem.purchase_price : 0;
+  const totalProfit = profitPerUnit * sellQuantity;
+
   const handleSellSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedItem) {
@@ -39,6 +59,22 @@ const InventoryTab: React.FC<Props> = ({ inventory, onQuickSell, onEdit }) => {
 
   return (
     <div className="animate-in">
+      {/* Summary Bar */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+        <div className="glass-card" style={{ padding: '20px', borderRight: '3px solid var(--danger)' }}>
+          <div className="stat-label">סה"כ מושקע במלאי</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--danger)', marginTop: '6px' }}>₪{totalInvested.toLocaleString()}</div>
+        </div>
+        <div className="glass-card" style={{ padding: '20px', borderRight: '3px solid var(--accent-blue)' }}>
+          <div className="stat-label">פריטים שונים</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-blue)', marginTop: '6px' }}>{inventory.length}</div>
+        </div>
+        <div className="glass-card" style={{ padding: '20px', borderRight: '3px solid var(--accent-gold)' }}>
+          <div className="stat-label">יחידות כוללות</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-gold)', marginTop: '6px' }}>{totalItems}</div>
+        </div>
+      </div>
+
       {/* Toolbar */}
       <div className="glass-card" style={{ padding: '20px', marginBottom: '30px', display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: '250px' }}>
@@ -92,8 +128,11 @@ const InventoryTab: React.FC<Props> = ({ inventory, onQuickSell, onEdit }) => {
           </div>
         )}
         
-        {filteredInventory.map((item) => (
-          <div key={item.id} className="glass-card" style={{ padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {filteredInventory.map((item) => {
+          const days = getDaysHeld(item.purchase_date);
+          const daysColor = getDaysColor(days);
+          return (
+          <div key={item.id} className="glass-card" style={{ padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRight: `3px solid ${daysColor}` }}>
             <div style={{ padding: '24px', flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -102,7 +141,9 @@ const InventoryTab: React.FC<Props> = ({ inventory, onQuickSell, onEdit }) => {
                   </div>
                   <div>
                     <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'white' }}>{item.product_name}</h3>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>#{item.id.split('-')[0]}</span>
+                    <span style={{ fontSize: '0.72rem', color: daysColor, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px' }}>
+                      ● {days} ימים במלאי
+                    </span>
                   </div>
                 </div>
                 
@@ -175,7 +216,8 @@ const InventoryTab: React.FC<Props> = ({ inventory, onQuickSell, onEdit }) => {
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Sell Modal */}
@@ -239,18 +281,27 @@ const InventoryTab: React.FC<Props> = ({ inventory, onQuickSell, onEdit }) => {
               </div>
 
               {sellQuantity > 0 && (
-                <div style={{ 
-                  background: 'rgba(255,255,255,0.03)', 
-                  padding: '12px 16px', 
-                  borderRadius: '12px', 
-                  border: '1px solid var(--border-color)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '24px'
-                }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>סה"כ תקבול ממכירה:</span>
-                  <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--success)' }}>₪{(sellPrice * sellQuantity).toLocaleString()}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
+                  <div style={{
+                    background: 'rgba(16,185,129,0.06)',
+                    padding: '12px 16px', borderRadius: '12px',
+                    border: '1px solid rgba(16,185,129,0.15)',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                  }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>סה"כ תקבול:</span>
+                    <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--success)' }}>₪{(sellPrice * sellQuantity).toLocaleString()}</span>
+                  </div>
+                  <div style={{
+                    background: totalProfit >= 0 ? 'rgba(16,185,129,0.06)' : 'rgba(225,29,72,0.06)',
+                    padding: '12px 16px', borderRadius: '12px',
+                    border: `1px solid ${totalProfit >= 0 ? 'rgba(16,185,129,0.2)' : 'rgba(225,29,72,0.2)'}`,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                  }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>רווח/הפסד צפוי:</span>
+                    <span style={{ fontSize: '1rem', fontWeight: 800, color: totalProfit >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                      {totalProfit >= 0 ? '+' : ''}₪{totalProfit.toLocaleString()}
+                    </span>
+                  </div>
                 </div>
               )}
 

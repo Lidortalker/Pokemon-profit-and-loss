@@ -21,11 +21,12 @@ const TransactionTable: React.FC<Props> = ({ transactions, onDelete, onEdit }) =
   });
 
   const filterOptions = [
-    { id: 'all', label: 'הכל', color: '#94a3b8' },
-    { id: 'buy', label: 'קניות', color: '#3b82f6' },
-    { id: 'sell', label: 'מכירות', color: '#10b981' },
-    { id: 'scratch', label: 'גירודים', color: '#f59e0b' },
-    { id: 'collection', label: 'אוסף', color: '#8b5cf6' },
+    { id: 'all',        label: 'הכל',     color: '#94a3b8' },
+    { id: 'buy',        label: 'קניות',   color: '#e11d48' },
+    { id: 'sell',       label: 'מכירות',  color: '#10b981' },
+    { id: 'scratch',    label: 'גירודים', color: '#e11d48' },
+    { id: 'credit',     label: 'זיכויים', color: '#10b981' },
+    { id: 'collection', label: 'אוסף',    color: '#8b5cf6' },
   ];
 
   return (
