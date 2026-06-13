@@ -103,19 +103,30 @@ const TransactionTable: React.FC<Props> = ({ transactions, onDelete, onEdit }) =
                 </td>
               </tr>
             ) : (
-              filteredTransactions.map((tx) => (
-                <tr key={tx.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.2s' }} className="hover-row">
+              filteredTransactions.map((tx) => {
+                const isExpense = tx.type === 'buy' || tx.type === 'scratch' || tx.type === 'collection';
+                const isIncome = tx.type === 'sell' || tx.type === 'credit';
+                return (
+                <tr
+                  key={tx.id}
+                  style={{
+                    borderBottom: '1px solid var(--border-color)',
+                    transition: 'background 0.2s',
+                    background: isExpense
+                      ? 'rgba(225, 29, 72, 0.03)'
+                      : isIncome
+                      ? 'rgba(16, 185, 129, 0.03)'
+                      : 'transparent'
+                  }}
+                  className="hover-row"
+                >
                   <td style={{ padding: '20px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{new Date(tx.date).toLocaleDateString('he-IL')}</td>
                   <td style={{ padding: '20px' }}>
                     <TypeBadge type={tx.type} />
                   </td>
                   <td style={{ padding: '20px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ 
-                        fontWeight: 600, 
-                        fontSize: '0.95rem',
-                        color: (tx.type === 'sell' || tx.type === 'credit') ? 'var(--danger)' : 'var(--text-primary)'
-                      }}>
+                      <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
                         {tx.product_name}
                       </span>
                     </div>
@@ -133,17 +144,17 @@ const TransactionTable: React.FC<Props> = ({ transactions, onDelete, onEdit }) =
                   </td>
                   <td style={{ padding: '20px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                      <span style={{ 
-                        fontWeight: 800, 
+                      <span style={{
+                        fontWeight: 800,
                         fontSize: '1rem',
-                        color: (tx.type === 'buy' || tx.type === 'scratch' || tx.type === 'collection') ? 'var(--danger)' : 'var(--success)' 
+                        color: isExpense ? 'var(--danger)' : 'var(--success)'
                       }}>
-                        {(tx.type === 'buy' || tx.type === 'scratch' || tx.type === 'collection') ? '-' : '+'}₪{(tx.amount * tx.quantity).toLocaleString()}
+                        {isExpense ? '-' : '+'}₪{(tx.amount * tx.quantity).toLocaleString()}
                       </span>
                       {tx.profit_amount !== undefined && tx.profit_amount !== null && (
-                        <span style={{ 
-                          fontSize: '0.75rem', 
-                          color: tx.profit_amount >= 0 ? 'var(--success)' : 'var(--danger)', 
+                        <span style={{
+                          fontSize: '0.75rem',
+                          color: tx.profit_amount >= 0 ? 'var(--success)' : 'var(--danger)',
                           fontWeight: 700,
                           background: tx.profit_amount >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
                           padding: '2px 6px',
@@ -162,7 +173,8 @@ const TransactionTable: React.FC<Props> = ({ transactions, onDelete, onEdit }) =
                     </div>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>
@@ -198,11 +210,11 @@ const TransactionTable: React.FC<Props> = ({ transactions, onDelete, onEdit }) =
 
 const TypeBadge = ({ type }: { type: string }) => {
   const config: any = {
-    buy: { label: 'קנייה', color: '#3b82f6', icon: <ArrowDownLeft size={12} /> },
-    sell: { label: 'מכירה', color: '#10b981', icon: <ArrowUpRight size={12} /> },
-    scratch: { label: 'גירוד', color: '#f59e0b', icon: <Zap size={12} /> },
-    credit: { label: 'זיכוי', color: '#06b6d4', icon: <Gift size={12} /> },
-    collection: { label: 'אוסף אישי', color: '#8b5cf6', icon: <Heart size={12} /> },
+    buy:        { label: 'קנייה',      color: '#e11d48', icon: <ArrowDownLeft size={12} /> },
+    sell:       { label: 'מכירה',      color: '#10b981', icon: <ArrowUpRight  size={12} /> },
+    scratch:    { label: 'גירוד',      color: '#e11d48', icon: <Zap           size={12} /> },
+    credit:     { label: 'זיכוי',      color: '#10b981', icon: <Gift          size={12} /> },
+    collection: { label: 'אוסף אישי', color: '#8b5cf6', icon: <Heart         size={12} /> },
   };
 
   const item = config[type] || { label: type, color: '#94a3b8', icon: null };

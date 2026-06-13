@@ -313,8 +313,14 @@ export default function Home() {
                         </tr>
                       </thead>
                       <tbody>
-                        {transactions.slice(0, 5).map((tx) => (
-                          <tr key={tx.id} style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.9rem' }}>
+                        {transactions.slice(0, 5).map((tx) => {
+                          const isExpense = tx.type === 'buy' || tx.type === 'scratch' || tx.type === 'collection';
+                          return (
+                          <tr key={tx.id} style={{
+                            borderBottom: '1px solid var(--border-color)',
+                            fontSize: '0.9rem',
+                            background: isExpense ? 'rgba(225, 29, 72, 0.03)' : 'rgba(16, 185, 129, 0.03)'
+                          }}>
                             <td style={{ padding: '14px 10px', color: 'var(--text-secondary)' }}>{new Date(tx.date).toLocaleDateString('he-IL')}</td>
                             <td style={{ padding: '14px 10px' }}>
                               <span style={{
@@ -322,19 +328,20 @@ export default function Home() {
                                 borderRadius: '6px',
                                 fontSize: '0.7rem',
                                 fontWeight: '700',
-                                background: tx.type === 'buy' || tx.type === 'scratch' || tx.type === 'collection' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                                color: tx.type === 'buy' || tx.type === 'scratch' || tx.type === 'collection' ? 'var(--danger)' : 'var(--success)'
+                                background: isExpense ? 'rgba(225, 29, 72, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                                color: isExpense ? 'var(--danger)' : 'var(--success)'
                               }}>
                                 {tx.type === 'buy' ? 'קנייה' : tx.type === 'sell' ? 'מכירה' : tx.type === 'scratch' ? 'גירוד' : tx.type === 'credit' ? 'זיכוי' : 'אוסף'}
                               </span>
                             </td>
-                            <td style={{ padding: '14px 10px', fontWeight: 600 }}>{tx.product_name}</td>
+                            <td style={{ padding: '14px 10px', fontWeight: 600, color: 'var(--text-primary)' }}>{tx.product_name}</td>
                             <td style={{ padding: '14px 10px' }}>{tx.quantity}</td>
-                            <td style={{ padding: '14px 10px', fontWeight: 700, color: tx.type === 'buy' || tx.type === 'scratch' || tx.type === 'collection' ? 'var(--danger)' : 'var(--success)' }}>
-                              {tx.type === 'buy' || tx.type === 'scratch' || tx.type === 'collection' ? '-' : '+'}₪{(tx.amount * tx.quantity).toLocaleString()}
+                            <td style={{ padding: '14px 10px', fontWeight: 700, color: isExpense ? 'var(--danger)' : 'var(--success)' }}>
+                              {isExpense ? '-' : '+'}₪{(tx.amount * tx.quantity).toLocaleString()}
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
